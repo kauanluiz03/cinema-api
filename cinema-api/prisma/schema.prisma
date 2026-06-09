@@ -1,0 +1,172 @@
+// ============================================================
+//  Prisma Schema - Sistema de Cinema
+//  Gerador: novo generator "prisma-client" (Prisma 6+)
+//  Banco:   PostgreSQL
+// ============================================================
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ------------------------------------------------------------
+//  ENUM de gênero de filme
+// ------------------------------------------------------------
+enum Genero {
+  ACAO
+  COMEDIA
+  DRAMA
+  TERROR
+  ROMANCE
+  FICCAO_CIENTIFICA
+  ANIMACAO
+}
+
+// ------------------------------------------------------------
+//  CINEMA  (1:N Sala, 1:N Filme, 1:N Sessao)
+// ------------------------------------------------------------
+model Cinema {
+  id       Int    @id @default(autoincrement())
+  nome     String
+  endereco String
+
+  salas   Sala[]
+  filmes  Filme[]
+  sessoes Sessao[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("cinemas")
+}
+
+// ------------------------------------------------------------
+//  SALA  (N:1 Cinema, 1:N Sessao)
+// ------------------------------------------------------------
+model Sala {
+  id         Int   @id @default(autoincrement())
+  numero     Int
+  capacidade Int
+  poltronas  Int[] // array de poltronas (PostgreSQL nativo)
+
+  cinemaId Int
+  cinema   Cinema @relation(fields: [cinemaId], references: [id], onDelete: Cascade)
+
+  sessoes Sessao[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("salas")
+}
+
+// ------------------------------------------------------------
+//  FILME  (N:1 Cinema, 1:N Sessao)
+// ------------------------------------------------------------
+model Filme {
+  id                 Int      @id @default(autoincrement())
+  titulo             String
+  sinopse            String
+  classificacao      String
+  duracao            Int // duração em minutos
+  elenco             String
+  genero             Genero
+  dataInicioExibicao DateTime
+  dataFinalExibicao  DateTime
+
+  cinemaId Int
+  cinema   Cinema @relation(fields: [cinemaId], references: [id], onDelete: Cascade)
+
+  sessoes Sessao[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("filmes")
+}
+
+// ------------------------------------------------------------
+//  SESSAO  (N:1 Filme, N:1 Sala, N:1 Cinema, 1:N Ingresso)
+// ------------------------------------------------------------
+model Sessao {
+  id              Int      @id @default(autoincrement())
+  horarioExibicao DateTime
+
+  filmeId Int
+  filme   Filme @relation(fields: [filmeId], references: [id], onDelete: Cascade)
+
+  salaId Int
+  sala   Sala @relation(fields: [salaId], references: [id], onDelete: Cascade)
+
+  cinemaId Int
+  cinema   Cinema @relation(fields: [cinemaId], references: [id], onDelete: Cascade)
+
+  ingressos Ingresso[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("sessoes")
+}
+
+// ------------------------------------------------------------
+//  INGRESSO  (N:1 Sessao, N:N Pedido)
+// ------------------------------------------------------------
+model Ingresso {
+  id           Int   @id @default(autoincrement())
+  valorInteira Float
+  valorMeia    Float
+
+  sessaoId Int
+  sessao   Sessao @relation(fields: [sessaoId], references: [id], onDelete: Cascade)
+
+  pedidos Pedido[] @relation("PedidoIngressos")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("ingressos")
+}
+
+// ------------------------------------------------------------
+//  LANCHE COMBO  (N:N Pedido)
+// ------------------------------------------------------------
+model LancheCombo {
+  id            Int    @id @default(autoincrement())
+  nome          String
+  descricao     String
+  valorUnitario Float
+  qtUnidade     Int
+  subtotal      Float
+
+  pedidos Pedido[] @relation("PedidoLanches")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("lanche_combos")
+}
+
+// ------------------------------------------------------------
+//  PEDIDO  (N:N Ingresso, N:N LancheCombo)
+// ------------------------------------------------------------
+model Pedido {
+  id         Int   @id @default(autoincrement())
+  qtInteira  Int
+  qtMeia     Int
+  valorTotal Float @default(0)
+
+  ingressos Ingresso[]    @relation("PedidoIngressos")
+  lanches   LancheCombo[] @relation("PedidoLanches")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("pedidos")
+}
